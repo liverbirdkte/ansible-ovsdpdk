@@ -1,0 +1,14 @@
+---
+default_hugepagesz: 1GB
+hugepagesz: 1G
+hugepages: 8
+
+ovs_bridge: br0
+dpdk_datapath_bit_mask: 0x1
+dpdk_socket_mem: 2048
+physical_ports:
+- name: eno2
+  addr: ""
+
+virtual_ports:
+- socket_path: /tmp/dpdkvhostclient0 

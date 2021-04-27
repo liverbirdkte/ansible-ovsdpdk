@@ -1,0 +1,83 @@
+---
+- name: Check if iommu is enabled in kernel
+  shell: grep GRUB_CMDLINE_LINUX_DEFAULT /etc/default/grub | grep -c "iommu=pt intel_iommu=on"
+  register: iommu_status
+  ignore_errors: true
+  
+- name: Enable iommu
+  lineinfile: dest="/etc/default/grub" regexp='GRUB_CMDLINE_LINUX_DEFAULT="(.*)"' line='GRUB_CMDLINE_LINUX_DEFAULT="\1 iommu=pt intel_iommu=on"' backrefs=yes
+  when: iommu_status.stdout == "0"
+
+- name: Check if hugepage is enalbed in kernel
+  shell: grep GRUB_CMDLINE_LINUX_DEFAULT /etc/default/grub | grep -c "hugepagez="
+  register: hugepage_status
+  ignore_errors: true
+
+- name: Enable hugepage
+  lineinfile: dest="/etc/default/grub" regexp='GRUB_CMDLINE_LINUX_DEFAULT="(.*)"' line='GRUB_CMDLINE_LINUX_DEFAULT="\1 default_hugepagesz={{ default_hugepagez }} hugepagesz={{ hugepagez }} hugepages={{ hugepages }}"' backrefs=yes
+  when: hugepage_status.stdout == "0"
+
+- debug:
+    msg: "Hugepage already enabled at boot time, skipping"
+  when: hugepage_status.stdout != "0"
+
+- name: update-grub
+  shell: update-grub
+  when: iommu_status.stdout == "0" or hugepage_status.stdout == "0"
+
+- name: reboot if we need it
+  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  async: 1 
+  poll: 0
+  ignore_errors: true
+  when: cgroup_status.stdout == "0"
+
+- name: waiting for server to come back
+  local_action: wait_for host={{ansible_fqdn}} state=started timeout=600 delay=15
+  sudo: false
+  when: cgroup_status.stdout == "0"
+
+- name: Mount hugepage
+  shell: |
+    mkdir /mnt/huge
+    mount -t hugetlbfs hugetlbfs /mnt/huge
+ 
+- name: Install required packages
+  apt:
+    name:
+      - openvswitch-switch-dpdk
+
+- name: Enable vfio
+  shell: |
+    modprobe vfio-pci
+    chmod a+x /dev/vfio
+    chmod 0666 /dev/vfio/*
+
+- name: Configure ovs-dpdk
+  shell: |
+    vs-vsctl set Open_vSwitch . "other_config:dpdk-init=true"
+    ovs-vsctl --no-wait set Open_vSwitch . "other_config:pmd-cpu-mask={{ dpdk_datapath_bit_mask }}"
+    ovs-vsctl --no-wait set Open_vSwitch . "other_config:dpdk-socket-mem={{ dpdk_socket_mem }}"
+
+- name: Create bridge
+  shell: |
+    ovs-vsctl add-br {{ ovs_bridge }} -- set bridge {{ ovs_bridge }} datapath_type=netd
+
+- name: Create dpdk ports
+  shell: |
+    dpdk-devbind --bind=vfio-pci {{ item.name }}
+    ovs-vsctl add-port {{ ovs_bridge }} dpdk-p{{ idx }} -- set Interface dpdk-p{{ idx }} type=dpdk options:dpdk-devargs={{ item.addr }}
+  loop: {{ physical_ports }}
+  loop_control:
+    index_var: idx
+
+- name: Create virtual ports
+  shell: |
+    ovs-vsctl add-port {{ ovs_bridge }} dpdkvhostclient{{ idx }} -- set Interface dpdkvhostclient{{ idx }} type=dpdkvhostuserclient options:vhost-server-path={{ item.socket_path }}
+    loop: {{ virtual_ports }}
+    loop_control:
+      index_var: idx
+
+- name: Restart ovs-dpdk
+  shell:
+    service openvswitch-switch restart

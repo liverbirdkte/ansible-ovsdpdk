@@ -1,0 +1,6 @@
+---
+- name: Setup ovs-dpdk
+  hosts: hosts
+  become: true 
+  roles: 
+    - ovsdpdk
