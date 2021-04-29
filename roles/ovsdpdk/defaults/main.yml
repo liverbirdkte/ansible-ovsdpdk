@@ -8,7 +8,7 @@ dpdk_datapath_bit_mask: 0x1
 dpdk_socket_mem: 2048
 physical_ports:
 - name: eno2
-  addr: ""
+  addr: "0000:41:00.1"
 
 virtual_ports:
 - socket_path: /tmp/dpdkvhostclient0 
