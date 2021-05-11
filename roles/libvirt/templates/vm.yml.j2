@@ -1,0 +1,39 @@
+<domain type='kvm'>
+  <name>{{ vm.name }}</name>
+  <uuid>{{ lookup('password', '/dev/null chars=ascii_letters,digits') | to_uuid }}</uuid>
+  <memory unit='MB'>{{ vm.memory }}</memory>
+  <memoryBacking>
+    <hugepages>
+      <page size='1' unit='G' nodeset='0'/>
+    </hugepages>
+  </memoryBacking>
+  <vcpu placement='static'{% if 'cpu_set' in vm %} cpuset={{ vm.cpu_set }}{% endif %}>{{ vm.vcpu }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <cpu mode='host-model'>
+    <model fallback='allow'/>
+  </cpu>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/virt/vms/{{ vm.name }}/{{ vm.name }}.img'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <disk type='file' device='cdrom'>
+      <source file='/virt/vms/{{ vm.name }}/cloud-config.img'/>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+  </devices>
+</domain>

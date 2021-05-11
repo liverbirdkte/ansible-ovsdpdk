@@ -1,0 +1,8 @@
+#cloud-config
+users: 
+- name:     root
+  sudo:     'ALL=(ALL) NOPASSWD:ALL'
+  groups:   sudo, wheel 
+  shell:    /bin/bash
+  ssh_authorized_keys:
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDf/GuOLmsqf64bu1mjJ0CpVebHkb0k5igXpVvfW/bwsRYNOmtf2knybwKgGU484bkC/z5Oc7oocs4qUTFfdFP4M+FgjhV2tZXSvIrbjV4wf1c5IiI0Fw+YXuW3/SDhFmYSkTIZ6F9cVz0C0gjn3/qSKNjUTkbvaG+8D85qHwaEVkO+ykfl1UqC4Rjlpbp4CBtX7VftXh5x3I+tnbe2q0E292CIFtko0wh7FezNpgAxGt5dGWcYX/izwIqdR/+DSN0bwUQZwSCG81MxKQRE4hAulDoQnDbQjDBJU980kbxsy7NY8MvX29Av9jBQiz4IXI2rgY+AyqrJYSQclYmPEAcXqkDeh12zWkVbu6tdx/FUN/iPArQQFvy636UF5lWWryASE8Kg5zojQ/ksvtG1HeTM1zkE2fLrV1mjHjn/eH2yehUKaoAoaic0hNrGnaIKFfTVhmpk9wp29ToMME0TG22qFQLRD9VONOukJ2E5R9yaIxbFwzdN0F5oghUpWM+tAY0= lei@node1

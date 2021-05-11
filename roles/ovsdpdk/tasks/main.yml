@@ -61,7 +61,7 @@
 
 - name: Create bridge
   shell: 
-    ovs-vsctl add-br {{ ovs_bridge }} -- set bridge {{ ovs_bridge }} datapath_type=netd
+    ovs-vsctl add-br {{ ovs_bridge }} -- set bridge {{ ovs_bridge }} datapath_type=netdev
   ignore_errors: true
 
 - name: Create dpdk ports
@@ -84,4 +84,5 @@
 - name: Restart ovs-dpdk
   service:
     name: openvswitch-switch
+    enabled: true
     state: restarted
