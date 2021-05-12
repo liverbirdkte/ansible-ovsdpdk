@@ -17,18 +17,6 @@
     enabled: true
     state: started
 
-# Check if VM exists
-- name: "{{ vm.name }} :: VM storage location "
-  file:
-    state: directory
-    path: /virt/vms/{{ vm.name }}
-
-- name: "{{ vm.name }} :: copy-on-write image"
-  stat:
-    path: /virt/vms/{{ vm.name }}/{{ vm.name }}.qcow2
-    get_checksum: false
-  register: vm_stat
-
 # Manage cloud image
 - name: qemu images directory
   file:
@@ -65,50 +53,11 @@
     group: root
     mode: 0755
 
-# Configure and launch VM
-- name: "Copy image to vm dir"
-  copy:
-    src: /virt/images/bionic-server-cloudimg-amd64.img
-    dest: /virt/vms/{{ vm.name }}/{{vm.name}}.img
-    remote_src: true
-  when: vm_stat.stat.exists == false
-
-- name: "Cloud-config file"
-  template:
-    src: templates/cloud-config.yml.j2
-    dest: /virt/vms/{{ vm.name }}/cloud-config.yml
-  when: vm_stat.stat.exists == false
-
-- name: "cloud-config image "
-  shell:
-    cloud-localds /virt/vms/{{ vm.name }}/cloud-config.img /virt/vms/{{ vm.name }}/cloud-config.yml
-  when: vm_stat.stat.exists == false
-
-# Generate kick-off
-- name: "VM xml"
-  template:
-    src: templates/vm.yml.j2
-    dest: /virt/vms/{{ vm.name }}/vm.yml
-  when: vm_stat.stat.exists == false
-
-
-- name: "{{ vm.name }} :: Create virtual machine "
-  shell:
-    cmd: >-
-        virt-install
-        --noautoconsole
-        --name {{ vm.name }}
-        --memory {{ vm.memory|default('512') }},hugepages=yes
-        --memorybacking hugepages=yes,size=1024,unit=M,locked=yes
-        --vcpus  {{ vm.vcpu|default('1') }}
-        --disk /virt/vms/{{ vm.name }}/{{ vm.name }}.img,device=disk,bus=virtio
-        --disk /virt/vms/{{ vm.name }}/cloud-config.img,device=cdrom
-        --os-type linux
-        --os-variant ubuntu18.04
-        --virt-type kvm
-        --graphics none
-        --import
-  when: vm_stat.stat.exists == false
+- name: Configure Virtual Machines
+  include_tasks: vm.yml
+  loop: "{{ virtual_machines }}"
+  loop_control:
+    loop_var: vm
 
 - name: "Copy private key"
   copy:

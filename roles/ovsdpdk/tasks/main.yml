@@ -47,6 +47,10 @@
     name:
       - openvswitch-switch-dpdk
 
+- name: Update ovs-vswitchd link
+  shell:
+    sudo update-alternatives --set ovs-vswitchd /usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk
+
 - name: Enable vfio
   shell: |
     modprobe vfio-pci
