@@ -46,14 +46,19 @@
   apt:
     name:
       - openvswitch-switch-dpdk
+      - dpdk
 
 - name: Update ovs-vswitchd link
   shell:
     sudo update-alternatives --set ovs-vswitchd /usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk
 
-- name: Enable vfio
+- name Enable vfio-pci
+  template:
+    src: templates/vfio-pci.conf
+    dest: /etc/modules-load.d/vfio-pci.conf
+
+- name: set vfio dev permission
   shell: |
-    modprobe vfio-pci
     chmod a+x /dev/vfio
     chmod 0666 /dev/vfio/*
 
