@@ -11,6 +11,42 @@
     get_checksum: false
   register: vm_stat
 
+# Manage cloud image
+- name: qemu images directory
+  file:
+    state: directory
+    path: /virt/images
+
+- name: Check Ubuntu cloud image
+  uri:
+    url: https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
+    method: HEAD
+  register: cloudimg_http_stat
+  check_mode: false
+
+- name: Check local cloud image
+  stat:
+    path: /virt/images/bionic-server-cloudimg-amd64.img
+    get_checksum: false
+  register: cloudimg_local_stat
+
+- name: Update Ubuntu cloud image
+  get_url:
+    url: https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
+    dest: /virt/images/bionic-server-cloudimg-amd64.img
+  when: not cloudimg_local_stat.stat.exists or
+        cloudimg_local_stat.stat.size != cloudimg_http_stat.content_length
+  register: cloudimg_local_updated
+
+# VM Directory
+- name: Virtual machine directory
+  file:
+    path: /virt/vms
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
 # Configure and launch VM
 - name: "Copy image to vm dir"
   copy:
@@ -30,7 +66,8 @@
     cloud-localds /virt/vms/{{ vm.name }}/cloud-config.img /virt/vms/{{ vm.name }}/cloud-config.yml
   when: vm_stat.stat.exists == false
 
-- name: "VM xml"
+# Generate kick-off
+- name: "Generate vm xml"
   template:
     src: templates/vm.yml.j2
     dest: /virt/vms/{{ vm.name }}/vm.yml
@@ -39,20 +76,7 @@
 
 - name: "{{ vm.name }} :: Create virtual machine "
   shell:
-    cmd: >-
-        virt-install
-        --noautoconsole
-        --name {{ vm.name }}
-        --memory {{ vm.memory|default('512') }},hugepages=yes
-        --memorybacking hugepages=yes,size=1024,unit=M,locked=yes
-        --vcpus  {{ vm.vcpu|default('1') }}
-        --disk /virt/vms/{{ vm.name }}/{{ vm.name }}.img,device=disk,bus=virtio
-        --disk /virt/vms/{{ vm.name }}/cloud-config.img,device=cdrom
-        --os-type linux
-        --os-variant ubuntu18.04
-        --virt-type kvm
-        --graphics none
-        --import
+    virsh create /virt/vms/{{ vm.name }}/vm.yml
   when: vm_stat.stat.exists == false
 
 - name: "Copy private key"

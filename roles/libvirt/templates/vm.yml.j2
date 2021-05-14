@@ -4,7 +4,7 @@
   <memory unit='MB'>{{ vm.memory }}</memory>
   <memoryBacking>
     <hugepages>
-      <page size='1' unit='G' nodeset='0'/>
+      <page size='{{ vm.hugepage_size|default('2') }}' unit='{{ vm.hugepage_unit|default('M') }}' nodeset='{{ nodeset|default('0') }}'/>
     </hugepages>
   </memoryBacking>
   <vcpu placement='static'{% if 'cpu_set' in vm %} cpuset={{ vm.cpu_set }}{% endif %}>{{ vm.vcpu }}</vcpu>
@@ -29,6 +29,14 @@
       <source file='/virt/vms/{{ vm.name }}/cloud-config.img'/>
       <target dev='vdb' bus='virtio'/>
     </disk>
+    {% for vhostuser in vhostusers %}
+    <interface type='vhostuser'>
+      <mac address='{{ vhostuser.mac }}'/>
+      <source type='unix' path='{{ vhostuser.path }}' mode='server'/>
+      <model type='virtio'/>
+      <driver name='vhost' rx_queue_size='256' />
+    </interface>
+   {% endfor %}
     <serial type='pty'>
       <target port='0'/>
     </serial>
